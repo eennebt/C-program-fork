@@ -1,0 +1,225 @@
+////////////// CREATED A SEPARATE FILE TO WRITE COMMENTS BECAUSE THERE WAS ISSUES RUNNING THE PROGRAM WITH COMMENTS ////////////////
+
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <string.h>
+
+int Child1();
+void Child2(int argc, char const *argv[]);
+void replaceAll(char *str, const char *oldWord, const char *newWord);
+void Child3(int argc, char const *argv[]);
+
+
+
+
+#define BUFFER_SIZE 256
+
+
+
+int main(int argc, char const *argv[])
+{
+    int pid, pid1, pid2;
+/*CHECKS if argv[1] and argv[2] have been supplied */
+    if( argc == 3 ) {
+        printf("The Files suplied are  %s, %s \n", argv[1], argv[2]);
+    }
+    else if( argc > 3 ) {
+        printf("Too many arguments supplied.\n");
+        exit(1);
+    }
+/* 2 files are expected if not then return status is 1*/
+    else {
+        printf(" 2  files expected .\n");
+        exit(1);
+    }
+
+
+/*forks for child 1 and checks for possible errors if an error is found program exits with exit status 1 */
+
+    pid = fork();
+    if(pid < 0){
+        printf(" \n Child[1], could not create a proccess \n ");
+        exit(1);
+
+    }
+    else if (pid == 0) {
+        printf("child[1] --> pid = %d and ppid = %d\n", getpid(), getppid());
+        Child1();
+        exit(0);
+    }
+/*forks for child 2, and checks for possible errors if an error is found program exits with exit status 1 */
+    else {
+        pid1 = fork();
+        if(pid1 < 0){
+            printf(" \n Child[2], could not create a proccess \n");
+            exit(1);
+
+        }
+
+
+        else if (pid1 == 0) {
+            printf("child[2] --> pid = %d and ppid = %d \n",getpid(), getppid());
+            Child2(argc, argv);
+            exit(0);
+        }
+        else {
+/*forks for child 3  and checks for possible errors if an error is found program exits with exit status 1 */
+            pid2 = fork();
+            if(pid2 < 0){
+                printf("\n Child[3] process could not be created \n");
+                exit(1);
+            }
+            else  if (pid2 == 0) {
+                printf("child[3] --> pid = %d and ppid = %d \n", getpid(), getppid());
+                Child3(argc, argv);
+                exit(0);
+            }
+            else {
+
+   /*Parent process waits for return status of all 3 chhildren return 0 then the exit status is printed to the screen */
+                int returnStatus;
+                int returnStatus1;
+                int returnStatus2;
+                waitpid(pid, &returnStatus, 0);
+                waitpid(pid2, &returnStatus1, 0);
+                waitpid(pid1, &returnStatus2, 0);
+
+                if (returnStatus == 0 && returnStatus1 == 0 && returnStatus2 == 0 )
+                {
+                    printf(" \n The Parent process  terminated normally exit status for \n Child 1 = %d , Child 2 = %d, Child 3 = %d ", &returnStatus, &returnStatus1, &returnStatus2);
+                }
+/*Parent process waits for return status of all 3 chhildren if any 3 of the proccess return 1 then the exit status is printed to the screen */
+                if (returnStatus == 1 || returnStatus1 == 1 || returnStatus1 == 1)
+                {
+                    printf(" \n The Parent process terminated with an error!  exit status for \n Child 1 = %d , Child 2 = %d, Child 3 = %d ", &returnStatus, &returnStatus1,
+                           &returnStatus2);
+                }
+
+            }
+        }
+    }
+
+
+    return 0;
+}
+
+/*Child 1()
+ * Function ask user to enter 10 grades
+ * the highest and lowest of the grades are saved
+ *
+ * */
+int Child1() {
+
+    int i, n, sum = 0, j;
+    float avg;
+    int big;
+    big = 0;
+    int small;
+    small = 0;    
+    j = 10;
+    
+for(i = 0; i < j;--j){
+        printf("\n ENTER %d Grades  \n", j);
+        scanf("%d", &n);
+        sum+=n;
+
+        if(n > big){
+            big = n;
+        }
+        if((n < small) || (small == 0)){
+            small = n;
+        }
+
+
+    }
+    avg = sum/10.0;
+    printf("The sum of 10 no is : %d \n The Average Grade is : %f \n",sum,avg);
+    printf("The Highest Grade was  =  %d , The lowest grade was =  %d ",big,small);
+}
+/*Child2():
+ *
+ * using the execv(command) and wc unix function we do a word count of the first file
+ * then print the word count
+ * */
+void Child2(int argc, char const *argv[]){
+
+ char* args[] = {"wc", "-w",argv[1],NULL};
+    execv("/usr/bin/wc",args);
+    printf("is the word count of afile "); 
+    exit(0);
+
+}
+/*Child3():
+ * This function takes the file arguements from file 1 and 2 , reads from file 1,
+ * writes to file 2
+ * uses The ReplaceAll function to replace the string of "execute" to "run and "study" to "examine
+ * continues Reading through file 1 until end of the file and the contents have been copied over to file 2
+ * std output to terminal screen "Contents copied and Updated" to file 2
+ *
+ *
+ * */
+
+
+void Child3(int argc, char const *argv[]){
+    FILE *fr;
+    FILE * fr1;
+    char buffer[BUFFER_SIZE];
+    fr = fopen(argv[1], "r");
+
+    fr1 = fopen(argv[2], "w");
+    fprintf(fr1, "UPDATE VERSION OF FILE ");
+
+    while((fgets(buffer,BUFFER_SIZE,fr)) != NULL)
+    {
+        replaceAll(buffer,"execute","run");
+        replaceAll(buffer,"study","examine");
+
+        fputs(buffer,fr1);
+    }
+
+    printf("\n CONTENTS COPIED AND UPDATED  %s  \n ", argv[2]);
+    fclose(fr);
+    fclose(fr1);
+
+    exit(0);
+
+
+
+
+
+}
+/*
+ * ReplaceAll():
+ * This Function
+ * counts the length of the "old word"
+ * checks if the word is a match to new word
+ * then if the word is a match it replaces it with the  new word
+ * */
+
+void replaceAll(char *str, const char *oldWord, const char *newWord)
+{
+    char *pos, temp[BUFFER_SIZE];
+    int index = 0;
+    int wordlength;
+
+    wordlength = strlen(oldWord);
+
+    while ((pos = strstr(str, oldWord)) != NULL)
+    {
+        strcpy(temp, str);
+        index = pos - str;
+        str[index] = '\0';
+        strcat(str, newWord);
+        strcat(str, temp + index + owlen);
+    }
+}
